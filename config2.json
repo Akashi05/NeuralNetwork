@@ -1,0 +1,12 @@
+{
+    "input_size": 64,
+    "layers": [
+        { "type": "linear", "output_size": 32 },
+        { "type": "sigmoid" },
+        { "type": "dropout", "probability": 0.5 },
+        { "type": "linear", "output_size": 16 },
+        { "type": "relu" },
+        { "type": "linear", "output_size": 3 },
+        { "type": "softmax" }
+    ]
+}

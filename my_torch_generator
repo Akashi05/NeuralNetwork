@@ -1,0 +1,79 @@
+#!/usr/bin/env python3
+import sys
+import os
+import json
+
+# Ajout du dossier courant au path python
+sys.path.append(os.getcwd())
+
+from my_torch.network import Network
+from my_torch.layers import Linear, Dropout
+from my_torch.activations import Tanh, Sigmoid, Softmax, ReLU
+
+def create_network_from_json(config_file):
+    if not os.path.exists(config_file):
+        raise FileNotFoundError(f"Config file introuvable: {config_file}")
+
+    with open(config_file, 'r') as f:
+        try:
+            config = json.load(f)
+        except json.JSONDecodeError:
+            raise ValueError("Le fichier n'est pas un JSON valide.")
+
+    net = Network()
+    
+    if "input_size" not in config:
+        raise ValueError("Le JSON doit contenir 'input_size'")
+        
+    current_input = int(config["input_size"])
+    
+    for layer_conf in config.get("layers", []):
+        layer_type = layer_conf.get("type", "").lower()
+        
+        if layer_type == "linear":
+            out_size = int(layer_conf["output_size"])
+            net.add(Linear(current_input, out_size))
+            current_input = out_size
+            
+        elif layer_type == "dropout":
+            prob = float(layer_conf.get("probability", 0.5))
+            net.add(Dropout(probability=prob))
+            
+        elif layer_type == "sigmoid":
+            net.add(Sigmoid())
+        elif layer_type == "tanh":
+            net.add(Tanh())
+        elif layer_type == "softmax":
+            net.add(Softmax())
+        elif layer_type == "relu":
+            net.add(ReLU())
+        else:
+            print(f"Type inconnu: {layer_type}")
+
+    return net
+
+def main():
+    if len(sys.argv) < 3:
+        print("Usage: ./my_torch_generator config.json nb_networks")
+        sys.exit(84)
+
+    config_path = sys.argv[1]
+    try:
+        nb = int(sys.argv[2])
+    except ValueError:
+        sys.exit(84)
+
+    try:
+        for k in range(nb):
+            net = create_network_from_json(config_path)
+            # Nom de sortie : config_1.nn
+            base = os.path.splitext(os.path.basename(config_path))[0]
+            out = f"{base}_{k+1}.nn"
+            net.save(out)
+            
+    except Exception as e:
+        print(f"Erreur: {e}")
+        sys.exit(84)
+
+if __name__ == "__main__":
+    main()

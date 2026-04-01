@@ -1,0 +1,10 @@
+{
+    "input_size": 2,
+    "layers": [
+        {"type": "linear", "output_size": 3},
+        {"type": "tanh"},
+        {"type": "dropout", "probability": 0.5},
+        {"type": "linear", "output_size": 1},
+        {"type": "tanh"}
+    ]
+}

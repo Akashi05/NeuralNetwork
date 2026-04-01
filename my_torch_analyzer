@@ -1,0 +1,82 @@
+#!/usr/bin/env python3
+import sys
+import argparse
+import numpy as np
+import os
+
+from utils import load_data
+from my_torch.network import Network
+from my_torch.loss import CategoricalCrossEntropy
+
+def get_output_in_text(output_vector):
+    """
+    Traduit le vecteur de sortie du réseau de neurone en texte.
+    On prend l'index qui a la plus grande valeur (argmax).
+    """
+    output = output_vector.flatten()
+    index = np.argmax(output)
+    
+    if index == 0:
+        return "Checkmate"
+    elif index == 1:
+        return "Check"
+    else:
+        return "Nothing"
+
+def main():
+    parser = argparse.ArgumentParser(description="Analyseur d'Echecs - Projet MY_TORCH")
+    
+    parser.add_argument('loadfile', type=str, help="Fichier contenant le réseau de neurones (.nn)")
+    parser.add_argument('chessfile', type=str, help="Fichier contenant les plateaux d'échecs (.txt)")
+    
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('--train', action='store_true', help="Lancer l'entrainement")
+    group.add_argument('--predict', action='store_true', help="Lancer la prédiction")
+    
+    parser.add_argument('--save', type=str, help="Fichier de sauvegarde après entrainement")
+
+    args = parser.parse_args()
+
+    if os.path.exists(args.loadfile):
+        # print(f"Chargement du réseau depuis {args.loadfile}...")
+        net = Network.load(args.loadfile)
+    else:
+        print("Fichier non trouvé -> Création FORCEE du réseau...")
+        from my_torch.layers import Layer
+        from my_torch.activations import Tanh, Softmax, ReLU
+        net = Network()
+        net.add(Layer(65, 256))
+        net.add(ReLU())
+        net.add(Layer(256, 128))
+        net.add(ReLU())
+        net.add(Layer(128, 3))
+        net.add(Softmax())
+
+    inputs, expected_outputs = load_data(args.chessfile)
+
+    if not inputs:
+        print("Erreur: Aucune donnée chargée.")
+        return
+
+    if args.train:
+        net.use_loss(CategoricalCrossEntropy())
+        print("Lancement de l'entraînement...")
+        epochs = 30
+        learning_rate = 0.005
+
+        net.train(inputs, expected_outputs, epochs, learning_rate)
+
+        save_file = args.save if args.save else args.loadfile
+        net.save(save_file)
+
+    elif args.predict:
+        try:
+            for input_vector in inputs:
+                output = net.predict(input_vector)
+                print(get_output_in_text(output))
+        except BrokenPipeError:
+            sys.stderr.close()
+            pass
+
+if __name__ == "__main__":
+    main()
